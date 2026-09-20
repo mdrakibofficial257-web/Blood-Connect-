@@ -411,7 +411,7 @@ function reqCard(r,admin){
   ${admin?`<div class="meta"><span>${L('রোগী','Patient')}: ${esc(r.patient)}</span><span>${esc(r.contact)}</span>${r.demo?`<span class="pill">${L('ডেমো','Demo')}</span>`:''}</div>`:''}
   ${admin?'':`<div class="row"><button class="btn btn-p" data-act="help" data-id="${esc(r.id)}" type="button">${L('সাহায্য করুন','I can help')}</button><button class="btn btn-o" data-act="share" data-id="${esc(r.id)}" type="button">${L('শেয়ার করুন','Share')}</button></div>`}</article>`;
 }
-const statusLabel=s=>({pending:L('অপেক্ষমাণ','Pending'),approved:L('অনুমোদিত','Approved'),rejected:L('প্রত্যাখ্যাত','Rejected'),suspended:L('স্থগিত','Suspended'),fulfilled:L('পূর্ণ হয়েছে','Fulfilled')}[s]||s);
+const statusLabel=s=>({pending:L('অপেক্ষমাণ','Pending'),approved:L('প্রকাশিত','Published'),rejected:L('বাতিল','Removed'),suspended:L('স্থগিত','Suspended'),fulfilled:L('পূর্ণ হয়েছে','Fulfilled')}[s]||s);
 
 /* ================= views ================= */
 function viewHome(){
@@ -456,7 +456,7 @@ function updateResults(){
 }
 
 function viewRegister(){
-  return`<div class="ph"><h1>${L('রক্তদাতা হিসেবে নিবন্ধন','Become a blood donor')}</h1><p class="muted">${L('আপনার নিবন্ধন অ্যাডমিন অনুমোদনের পর প্রকাশিত হবে।','Your profile is published after admin approval.')}</p></div>
+  return`<div class="ph"><h1>${L('রক্তদাতা হিসেবে নিবন্ধন','Become a blood donor')}</h1><p class="muted">${L('নিবন্ধন করলেই আপনি সঙ্গে সঙ্গে খোঁজ তালিকায় আসবেন। প্রয়োজনে অ্যাডমিন কোনো প্রোফাইল বাতিল করতে পারেন।','You appear in the search list as soon as you register. An admin can remove a profile if needed.')}</p></div>
   <form class="card" data-form="register" novalidate><input type="hidden" name="_t" id="_t" value="${Date.now()}">
   <div class="hp" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
   <div class="two">${fld('name',L('পূর্ণ নাম','Full name'),'<input type="text" id="name" name="name" autocomplete="name" maxlength="60">')}
@@ -482,7 +482,7 @@ function viewRegister(){
 }
 function viewRequestNew(){
   const dt=new Date(Date.now()+36e5);const v=isoDay(dt)+'T'+String(dt.getHours()).padStart(2,'0')+':00';
-  return`<div class="ph"><h1>${L('জরুরি রক্তের আবেদন','Emergency blood request')}</h1><p class="muted">${L('অ্যাডমিন যাচাইয়ের পর আবেদন প্রকাশিত হবে এবং মিল থাকা দাতাদের জানানো হবে।','After admin review the request is published and matching donors are notified.')}</p></div>
+  return`<div class="ph"><h1>${L('জরুরি রক্তের আবেদন','Emergency blood request')}</h1><p class="muted">${L('আবেদন সঙ্গে সঙ্গে প্রকাশিত হবে এবং মিল থাকা দাতাদের জানানো হবে।','The request is published right away and matching donors are notified.')}</p></div>
   <form class="card" data-form="request" novalidate><input type="hidden" name="_t" id="_t" value="${Date.now()}">
   <div class="hp" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
   <div class="two">${fld('patient',L('রোগীর নাম','Patient name'),'<input type="text" id="patient" name="patient" maxlength="60">')}
@@ -493,7 +493,7 @@ function viewRequestNew(){
   ${fld('location',L('হাসপাতালের অবস্থান','Hospital location'),'<input type="text" id="location" name="location" maxlength="100">')}
   ${fld('unionId',L('নাঙ্গলকোটের এলাকা (ঐচ্ছিক)','Nangalkot area (optional)'),`<select id="unionId" name="unionId">${unionOpts('',L('নির্দিষ্ট নয় — সব এলাকার দাতা','Not specific — all areas'))}</select>`,L('বেছে নিলে ওই এলাকার দাতাদের আগে জানানো হবে।','If chosen, donors from that area are notified.'))}
   ${fld('when',L('কখন প্রয়োজন','Required date & time'),`<input type="datetime-local" id="when" name="when" value="${v}">`)}
-  ${fld('contact',L('রোগী / সঙ্গীর যোগাযোগ নম্বর','Patient / attendant number'),'<input type="tel" id="contact" name="contact" inputmode="numeric" placeholder="01XXXXXXXXX">',L('অনুমোদনের পর এই নম্বর প্রকাশ্যে দেখানো হবে, যাতে দাতারা ফোন করতে পারেন।','After approval this number is shown publicly so donors can call.'))}</div>
+  ${fld('contact',L('রোগী / সঙ্গীর যোগাযোগ নম্বর','Patient / attendant number'),'<input type="tel" id="contact" name="contact" inputmode="numeric" placeholder="01XXXXXXXXX">',L('এই নম্বর প্রকাশ্যে দেখানো হবে, যাতে দাতারা ফোন করতে পারেন। শুধু নিজের বা রোগীর পক্ষের নম্বর দিন।','This number is shown publicly so donors can call. Use only your own or the patient family’s number.'))}</div>
   ${fld('info',L('অতিরিক্ত তথ্য','Additional information'),'<textarea id="info" name="info" maxlength="300"></textarea>')}
   <div class="field"><label class="chk" for="consent"><input type="checkbox" id="consent" name="consent"><span>${L('আমি নিশ্চিত করছি তথ্য সঠিক এবং নম্বরটি প্রকাশ্যে দেখানোর অনুমতি দিচ্ছি।','I confirm the details are true and allow the number to be shown publicly.')}</span></label><p class="err" id="e-consent" role="alert"></p></div>
   <button class="btn btn-d" type="submit" style="width:100%">${L('আবেদন জমা দিন','Submit request')}</button></form>`;
@@ -533,7 +533,7 @@ function viewDashboard(){
   const d=me();if(!d)return viewLogin();
   const e=eligible(d);const notes=db.notes.filter(n=>n.donorId===d.id).sort((a,b)=>b.at-a.at);
   const cr=db.contacts.filter(c=>c.donorId===d.id).sort((a,b)=>b.at-a.at);
-  const banner=d.status==='pending'?`<div class="card" style="background:var(--amber-soft);color:var(--amber);border-color:transparent">${L('আপনার নিবন্ধন অ্যাডমিন অনুমোদনের অপেক্ষায় আছে। অনুমোদনের পর আপনি খোঁজ তালিকায় আসবেন।','Your registration is waiting for admin approval. You will appear in search after it is approved.')}</div>`:d.status!=='approved'?`<div class="card" style="background:var(--blood-soft);color:var(--blood);border-color:transparent">${L('আপনার প্রোফাইল বর্তমানে প্রকাশিত নয় ('+statusLabel(d.status)+')।','Your profile is not published ('+statusLabel(d.status)+').')}</div>`:'';
+  const banner=d.status==='pending'?`<div class="card" style="background:var(--amber-soft);color:var(--amber);border-color:transparent">${L('আপনার প্রোফাইল এখনো প্রকাশিত হয়নি।','Your profile is not published yet.')}</div>`:d.status!=='approved'?`<div class="card" style="background:var(--blood-soft);color:var(--blood);border-color:transparent">${L('অ্যাডমিন আপনার প্রোফাইল প্রকাশ বন্ধ রেখেছেন ('+statusLabel(d.status)+')। বিস্তারিত জানতে অ্যাডমিনের সঙ্গে যোগাযোগ করুন।','An admin has unpublished your profile ('+statusLabel(d.status)+'). Please contact the admin.')}</div>`:'';
   return`<div class="stack"><div style="display:flex;gap:14px;align-items:center">${avatar(d)}<div style="flex:1"><h1 style="margin:0;font-size:1.4rem;font-family:'Hind Siliguri',sans-serif">${esc(d.name)}</h1><div class="meta">${gb(d.group,'sm')}<span class="pill ${d.status==='approved'?'ok':'warn'}">${statusLabel(d.status)}</span></div></div><button class="btn btn-g btn-s" data-act="logout" type="button">${L('লগআউট','Log out')}</button></div>${banner}
   <section class="card"><h3>${L('আমার অবস্থা','My status')}</h3>
   <label class="sw"><input type="checkbox" data-tog="available"${d.available?' checked':''}><span class="k"></span><span>${L('এখন রক্ত দিতে প্রস্তুত','Available to donate')}</span></label>
@@ -569,7 +569,7 @@ function adminTab(){
   const ap=pub();
   if(atab==='overview'){const total=ap.reduce((s,d)=>s+d.donationCount,0);
     const mx=Math.max(1,...GROUPS.map(g=>ap.filter(d=>d.group===g).length));
-    return`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${[[L('অনুমোদিত দাতা','Approved donors'),ap.length],[L('অপেক্ষমাণ দাতা','Pending donors'),db.donors.filter(d=>d.status==='pending').length],[L('সফল রক্তদান','Successful donations'),total],[L('চলমান আবেদন','Active requests'),activeReqs().length],[L('অপেক্ষমাণ আবেদন','Pending requests'),db.requests.filter(r=>r.status==='pending').length],[L('খোলা রিপোর্ট','Open reports'),db.reports.filter(r=>r.open).length]].map(x=>`<div class="card"><div class="muted small">${x[0]}</div><b class="tel">${N(x[1])}</b></div>`).join('')}</div>
+    return`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${[[L('প্রকাশিত দাতা','Published donors'),ap.length],[L('বাতিল বা স্থগিত দাতা','Removed donors'),db.donors.filter(d=>d.status!=='approved').length],[L('সফল রক্তদান','Successful donations'),total],[L('চলমান আবেদন','Active requests'),activeReqs().length],[L('বাতিল আবেদন','Removed requests'),db.requests.filter(r=>r.status==='rejected').length],[L('খোলা রিপোর্ট','Open reports'),db.reports.filter(r=>r.open).length]].map(x=>`<div class="card"><div class="muted small">${x[0]}</div><b class="tel">${N(x[1])}</b></div>`).join('')}</div>
     <section class="sec"><h2>${L('গ্রুপ অনুযায়ী পরিসংখ্যান','Blood group statistics')}</h2><div class="card"><div class="bars">${GROUPS.map(g=>{const t=ap.filter(d=>d.group===g).length;const av=ap.filter(d=>d.group===g&&d.available).length;return`<div class="bar"><b>${g}</b><div class="tr"><div class="fl" style="width:${Math.round(t/mx*100)}%"></div></div><span>${L(N(t)+' · '+N(av)+' উপলব্ধ',t+' · '+av+' avail.')}</span></div>`}).join('')}</div></div></section>
     <section class="sec card"><h3>${L('ডাটা','Data')}</h3><p class="muted small">${L('সব তথ্য Supabase ডেটাবেসে সংরক্ষিত, যেকোনো ডিভাইস থেকে অ্যাডমিন হিসেবে লগইন করে দেখা যায়।','All data is stored in the Supabase database and is visible from any device after admin login.')}</p></section>`;}
   if(atab==='donors'){
@@ -580,7 +580,7 @@ function adminTab(){
   if(atab==='requests'){
     const list=[...db.requests].filter(r=>!arf||r.status===arf).sort((a,b)=>(b.status==='pending')-(a.status==='pending')||b.createdAt-a.createdAt);
     return`<div class="field" style="max-width:280px"><label for="ar-s">${L('অবস্থা','Status')}</label><select id="ar-s" data-ar="1"><option value="">${L('সব','All')}</option>${['pending','approved','rejected','fulfilled'].map(s=>`<option value="${s}"${arf===s?' selected':''}>${statusLabel(s)}</option>`).join('')}</select></div>
-    <div class="grid g2">${list.map(r=>`<div class="stack">${reqCard(r,true)}<div class="row auto">${r.status!=='approved'?`<button class="btn btn-p btn-s" data-act="adm" data-op="rq-approve" data-id="${r.id}" type="button">${L('অনুমোদন','Approve')}</button>`:''}${r.status==='pending'?`<button class="btn btn-g btn-s" data-act="adm" data-op="rq-reject" data-id="${r.id}" type="button">${L('প্রত্যাখ্যান','Reject')}</button>`:''}${r.status==='approved'?`<button class="btn btn-g btn-s" data-act="adm" data-op="rq-done" data-id="${r.id}" type="button">${L('পূর্ণ হয়েছে','Mark fulfilled')}</button>`:''}<button class="btn btn-d btn-s" data-act="adm" data-op="rq-del" data-id="${r.id}" type="button">${L('মুছুন','Delete')}</button></div></div>`).join('')||`<div class="empty">${L('কোনো আবেদন নেই।','No requests.')}</div>`}</div>`;}
+    <div class="grid g2">${list.map(r=>`<div class="stack">${reqCard(r,true)}<div class="row auto">${r.status!=='approved'?`<button class="btn btn-p btn-s" data-act="adm" data-op="rq-approve" data-id="${r.id}" type="button">${L('আবার প্রকাশ করুন','Publish again')}</button>`:`<button class="btn btn-d btn-s" data-act="adm" data-op="rq-reject" data-id="${r.id}" type="button">${L('অনুমোদন বাতিল','Remove from list')}</button>`}${r.status==='approved'?`<button class="btn btn-g btn-s" data-act="adm" data-op="rq-done" data-id="${r.id}" type="button">${L('পূর্ণ হয়েছে','Mark fulfilled')}</button>`:''}<button class="btn btn-d btn-s" data-act="adm" data-op="rq-del" data-id="${r.id}" type="button">${L('মুছুন','Delete')}</button></div></div>`).join('')||`<div class="empty">${L('কোনো আবেদন নেই।','No requests.')}</div>`}</div>`;}
   if(atab==='unions'){
     return`<div class="stack">${db.unions.map(u=>{const n=db.donors.filter(d=>d.unionId===u.id).length;return`<div class="card" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><b>${esc(u.bn)}</b> <span class="muted">/ ${esc(u.en)}</span><div class="small muted">${L('দাতা','Donors')}: ${N(n)}</div></div><div class="row auto"><button class="btn btn-g btn-s" data-act="adm" data-op="un-edit" data-id="${u.id}" type="button">${L('সম্পাদনা','Edit')}</button><button class="btn btn-d btn-s" data-act="adm" data-op="un-del" data-id="${u.id}" type="button">${L('মুছুন','Delete')}</button></div></div>`}).join('')}<button class="btn btn-p" data-act="adm" data-op="un-new" type="button">${L('নতুন ইউনিয়ন যোগ করুন','Add a union')}</button><p class="hint">${L('ইউনিয়নের তালিকা সরকারি তথ্যের সঙ্গে মিলিয়ে নিন। ডাটাবেস কাঠামো পুরো কুমিল্লা জেলা সামলানোর জন্য তৈরি।','Please verify the union list against official records. The database structure is ready to cover all of Cumilla district.')}</p></div>`;}
   const rs=[...db.reports].sort((a,b)=>b.at-a.at);
@@ -588,7 +588,7 @@ function adminTab(){
 }
 function adDonorList(list){
   return list.map(d=>`<article class="card stack"><div style="display:flex;gap:12px;align-items:center">${gb(d.group,'sm')}<div style="flex:1;min-width:0"><b>${esc(d.name)}</b><div class="small muted">${esc(d.phone)} · ${esc(d.village)}, ${esc(uname(d.unionId))}</div></div><span class="pill ${d.status==='approved'?'ok':d.status==='pending'?'warn':'bad'}">${statusLabel(d.status)}</span></div>
-  <div class="row auto">${d.status!=='approved'?`<button class="btn btn-p btn-s" data-act="adm" data-op="dn-approve" data-id="${d.id}" type="button">${L('অনুমোদন','Approve')}</button>`:''}${d.status==='pending'?`<button class="btn btn-g btn-s" data-act="adm" data-op="dn-reject" data-id="${d.id}" type="button">${L('প্রত্যাখ্যান','Reject')}</button>`:''}<button class="btn btn-g btn-s" data-act="adm" data-op="dn-avail" data-id="${d.id}" type="button">${d.available?L('অনুপলব্ধ করুন','Set unavailable'):L('উপলব্ধ করুন','Set available')}</button><button class="btn btn-g btn-s" data-act="adm" data-op="dn-edit" data-id="${d.id}" type="button">${L('সম্পাদনা','Edit')}</button><button class="btn btn-d btn-s" data-act="adm" data-op="dn-del" data-id="${d.id}" type="button">${L('মুছুন','Delete')}</button></div></article>`).join('')||`<div class="empty" style="grid-column:1/-1">${L('কোনো দাতা নেই।','No donors.')}</div>`;
+  <div class="row auto">${d.status!=='approved'?`<button class="btn btn-p btn-s" data-act="adm" data-op="dn-approve" data-id="${d.id}" type="button">${L('আবার প্রকাশ করুন','Publish again')}</button>`:`<button class="btn btn-d btn-s" data-act="adm" data-op="dn-revoke" data-id="${d.id}" type="button">${L('অনুমোদন বাতিল','Remove from list')}</button>`}<button class="btn btn-g btn-s" data-act="adm" data-op="dn-avail" data-id="${d.id}" type="button">${d.available?L('অনুপলব্ধ করুন','Set unavailable'):L('উপলব্ধ করুন','Set available')}</button><button class="btn btn-g btn-s" data-act="adm" data-op="dn-edit" data-id="${d.id}" type="button">${L('সম্পাদনা','Edit')}</button><button class="btn btn-d btn-s" data-act="adm" data-op="dn-del" data-id="${d.id}" type="button">${L('মুছুন','Delete')}</button></div></article>`).join('')||`<div class="empty" style="grid-column:1/-1">${L('কোনো দাতা নেই।','No donors.')}</div>`;
 }
 
 /* ================= router ================= */
@@ -654,7 +654,8 @@ ACT.delme=()=>confirmBox(L('আপনার প্রোফাইল ও সব 
 ACT.adm=async el=>{
   if(!isAdmin())return;const op=el.dataset.op,id=el.dataset.id;const d=db.donors.find(x=>x.id===id);const r=db.requests.find(x=>x.id===id);const enc=encodeURIComponent(id||'');const done=async m=>{await refreshData();render(true);m&&toast(m)};const patch=(t,b)=>SB.rest(t+'?id=eq.'+enc,{method:'PATCH',body:b});const del=t=>SB.rest(t+'?id=eq.'+enc,{method:'DELETE'});
   try{switch(op){
-    case'dn-approve':await patch('donors',{status:'approved'});return done(L('অনুমোদিত।','Approved.'));
+    case'dn-approve':await patch('donors',{status:'approved'});return done(L('আবার প্রকাশ করা হয়েছে।','Published again.'));
+    case'dn-revoke':await patch('donors',{status:'suspended'});return done(L('তালিকা থেকে সরানো হয়েছে।','Removed from the list.'));
     case'dn-reject':await patch('donors',{status:'rejected'});return done(L('প্রত্যাখ্যাত।','Rejected.'));
     case'dn-avail':await patch('donors',{available:!d.available});return done();
     case'dn-del':return confirmBox(L(esc(d.name)+' এর প্রোফাইল মুছে যাবে।','Delete '+esc(d.name)+'’s profile?'),async()=>{try{await del('donors');await done(L('মুছে ফেলা হয়েছে।','Deleted.'))}catch(e){toast(failMsg(e))}});
@@ -731,7 +732,7 @@ const FORMS={
       if(e&&e.code==='23505')return showErrors(f,{phone:dup});
       throw e;
     }
-    toast(L('নিবন্ধন জমা হয়েছে। অ্যাডমিন অনুমোদনের অপেক্ষায়।','Registration submitted. Waiting for admin approval.'));location.hash='#/dashboard';
+    toast(L('নিবন্ধন সম্পন্ন! আপনি এখন খোঁজ তালিকায় আছেন।','Registration complete! You are now in the search list.'));location.hash='#/dashboard';
   },
   async request(f,d){
     if(botCheck(d,3500))return toast(tooFast);
@@ -747,7 +748,7 @@ const FORMS={
     if(!showErrors(f,E))return;
     if(!rate('req',3600e3,3))return toast(L('অল্প সময়ে অনেকবার চেষ্টা হয়েছে।','Too many attempts. Try again later.'));
     await SB.rest('blood_requests',{method:'POST',auth:false,body:{patient_name:d.patient.trim(),blood_group:d.group,bags,hospital:d.hospital.trim(),location:d.location.trim(),union_id:db.unions.some(u=>u.id===d.unionId)?d.unionId:null,needed_at:new Date(d.when).toISOString(),contact,level:['critical','urgent','normal'].includes(d.level)?d.level:'urgent',info:(d.info||'').trim().slice(0,300)||null}});
-    $('#app').innerHTML=`<div class="card stack center" style="max-width:520px;margin:24px auto"><h1>${L('আবেদন জমা হয়েছে','Request submitted')}</h1><p>${L('অ্যাডমিন যাচাই করে দ্রুত প্রকাশ করবেন এবং মিল থাকা দাতাদের জানানো হবে।','An admin will review it shortly, publish it and notify matching donors.')}</p><div class="row"><a class="btn btn-p" href="#/requests">${L('চলমান আবেদন দেখুন','See active requests')}</a><a class="btn btn-o" href="#/find">${L('নিজে দাতা খুঁজুন','Search donors yourself')}</a></div></div>`;window.scrollTo(0,0);
+    $('#app').innerHTML=`<div class="card stack center" style="max-width:520px;margin:24px auto"><h1>${L('আবেদন প্রকাশিত হয়েছে','Request published')}</h1><p>${L('আপনার আবেদন এখন সবাই দেখতে পাচ্ছেন এবং মিল থাকা দাতাদের জানানো হয়েছে।','Your request is now visible to everyone and matching donors have been notified.')}</p><div class="row"><a class="btn btn-p" href="#/requests">${L('চলমান আবেদন দেখুন','See active requests')}</a><a class="btn btn-o" href="#/find">${L('নিজে দাতা খুঁজুন','Search donors yourself')}</a></div></div>`;window.scrollTo(0,0);
   },
   async contact(f,d){
     if(botCheck(d,2500))return toast(tooFast);
