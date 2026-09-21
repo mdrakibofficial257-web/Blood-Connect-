@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Nangalkot Blood Connect — নাঙ্গলকোট ব্লাড কানেক্ট</title>
+<title>Onedrop Blood Bank Nangalkot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@600;700&display=swap" rel="stylesheet">
@@ -183,7 +183,7 @@ table{border-collapse:collapse;width:100%;font-size:.92rem}th,td{text-align:left
 <body>
 <a class="skip" href="#app" id="skip">Skip to content</a>
 <header class="top"><div class="wrap">
-  <a class="brand" href="#/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5C9 7 5.5 10.5 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10.5 15 7 12 2.5z"/></svg><span>Nangalkot Blood Connect<small id="brandsub"></small></span></a>
+  <a class="brand" href="#/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5C9 7 5.5 10.5 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 10.5 15 7 12 2.5z"/></svg><span>Onedrop Blood Bank<small id="brandsub"></small></span></a>
   <nav class="tnav" id="tnav" aria-label="Main"></nav>
   <span class="spacer"></span>
   <button class="langbtn" data-act="sharesite" id="sharebtn" type="button" style="width:40px;padding:0;display:inline-flex;align-items:center;justify-content:center;margin-right:8px"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg></button>
@@ -253,6 +253,44 @@ const fmtDT=s=>new Date(s).toLocaleString(loc(),{day:'numeric',month:'short',hou
 const ageOf=dob=>Math.floor((Date.now()-new Date(dob+'T00:00:00'))/(365.25*DAY));
 const GROUPS=['A+','A-','B+','B-','AB+','AB-','O+','O-'];
 const UNIONS=[['adra','আদ্রা','Adra'],['bakshaganj','বক্সগঞ্জ','Bakshaganj'],['bangodda','বাংগড্ডা','Bangodda'],['battali','বাটতলী','Battali'],['daulkhar','দৌলখাঁড়','Daulkhar'],['dhalua','ঢালুয়া','Dhalua'],['heshakhal','হেসাখাল','Heshakhal'],['jodda-east','জোড্ডা পূর্ব','Jodda East'],['jodda-west','জোড্ডা পশ্চিম','Jodda West'],['makrabpur','মক্রবপুর','Makrabpur'],['mokara','মোকরা','Mokara'],['peria','পেড়িয়া','Peria'],['roykot','রায়কোট','Roykot'],['satbaria','সাতবাড়িয়া','Satbaria'],['paurashava','নাঙ্গলকোট পৌরসভা','Nangalkot Paurashava']].map(([id,bn,en])=>({id,bn,en,kind:id==='paurashava'?'paurashava':'union'}));
+
+/* ================= phone notifications (Web Push) ================= */
+const VAPID_PUBLIC='BLy8GQMS7DWM9H7V6oeSSYWrzIIHm15B2pKS5eA_3x26A8ly3TXhHWy9CrCmf3xusiYM4T0XVKMVuA9yNNu3lsI';
+const pushSupported=()=>typeof navigator!=='undefined'&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const b64u=x=>{const p='='.repeat((4-x.length%4)%4);const r=atob((x+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(r,c=>c.charCodeAt(0))};
+async function pushStatus(){
+  if(!pushSupported())return 'unsupported';
+  if(Notification.permission==='denied')return 'denied';
+  try{const reg=await navigator.serviceWorker.getRegistration();const sub=reg&&await reg.pushManager.getSubscription();return sub&&Notification.permission==='granted'?'on':'off'}catch(e){return 'off'}
+}
+async function pushEnable(){
+  const d=me();if(!d||!pushSupported())return 'unsupported';
+  const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+  const perm=await Notification.requestPermission();if(perm!=='granted')return 'denied';
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUBLIC)});
+  const j=sub.toJSON();
+  await SB.rest('push_subscriptions?on_conflict=endpoint',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{donor_id:d.id,endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth}});
+  return 'on';
+}
+async function pushDisable(){
+  if(!pushSupported())return;
+  const reg=await navigator.serviceWorker.getRegistration();const sub=reg&&await reg.pushManager.getSubscription();
+  if(sub){const ep=sub.endpoint;await sub.unsubscribe();try{await SB.rest('push_subscriptions?endpoint=eq.'+encodeURIComponent(ep),{method:'DELETE'})}catch(e){}}
+}
+async function updatePushCard(){
+  if(!$('#pushcard')||!me())return;
+  let st=await pushStatus();
+  if(st==='off'&&store.get('nbc.push.'+me().id)==='1'&&Notification.permission==='granted'){try{await pushEnable();st='on'}catch(e){}}
+  const el=$('#pushcard');if(!el)return;
+  const T={
+    on:[L('চালু আছে। জরুরি রক্তের আবেদন বা যোগাযোগের অনুরোধ এলে এই ফোনে নোটিফিকেশন আসবে।','On. This phone will get an alert for emergency requests and contact requests.'),`<button class="btn btn-g btn-s" data-act="pushoff" type="button">${L('বন্ধ করুন','Turn off')}</button>`],
+    off:[L('চালু করলে জরুরি রক্তের আবেদন বা কেউ আপনার সঙ্গে যোগাযোগ চাইলে সাইট বন্ধ থাকলেও ফোনে নোটিফিকেশন আসবে।','Turn this on to get a phone alert for emergency requests and contact requests, even when the site is closed.'),`<button class="btn btn-p" data-act="pushon" type="button">${L('অ্যালার্ট চালু করুন','Turn on alerts')}</button>`],
+    denied:[L('এই সাইটের অ্যালার্ট ব্লক করা আছে। Chrome-এর ⋮ মেনু → Settings → Site settings → Notifications থেকে এই সাইটকে Allow করুন, তারপর পেজ রিফ্রেশ করুন।','Alerts are blocked for this site. In Chrome open menu → Settings → Site settings → Notifications and allow this site, then refresh.'),''],
+    unsupported:[L('এই ব্রাউজারে ফোনে অ্যালার্ট চলে না। Android-এ Chrome ব্যবহার করুন। আপাতত এই পেজে ঢুকলেই আবেদন দেখতে পাবেন।','Phone alerts are not supported in this browser. Use Chrome on Android. Meanwhile you can see requests on this page.'),'']
+  }[st];
+  el.innerHTML=`<h3>${L('ফোনে অ্যালার্ট','Phone alerts')}</h3><p style="margin:0 0 10px">${T[0]}</p>${T[1]}`;
+}
 
 /* ================= data layer (Supabase database) ================= */
 const db={unions:UNIONS.map(u=>({...u})),donors:[],requests:[],contacts:[],reports:[],notes:[],pubDonors:[],pubReqs:[],allDonors:[],allReqs:[],mine:null,adminOk:false,loading:true,err:false};
@@ -430,13 +468,13 @@ function viewHome(){
   <p style="margin-top:12px"><a class="btn btn-d" href="#/request-new">${L('রোগীর জন্য রক্তের আবেদন করুন','Request blood for a patient')}</a></p></section>
   <section class="sec"><h2>${L('রক্তের গ্রুপ অনুযায়ী দাতা','Donors by blood group')}</h2><div class="card"><div class="bars">${GROUPS.map(g=>{const t=ap.filter(d=>d.group===g).length;return`<div class="bar"><b>${g}</b><div class="tr"><div class="fl" style="width:${Math.round(t/mx*100)}%"></div></div><span>${L(N(t)+' জন · '+N(cnt(g))+' প্রস্তুত',t+' · '+cnt(g)+' ready')}</span></div>`}).join('')}</div></div></section>
   <section class="sec"><div class="msg"><h2>${L('আপনার এক ব্যাগ রক্ত, একটি জীবন বাঁচাতে পারে।','Your one bag of blood can save a life.')}</h2>
-  <p>${L('১৮ থেকে ৬০ বছর বয়সী সুস্থ যে কেউ নিয়ম মেনে রক্ত দিতে পারেন। একবার নিবন্ধন করুন — কারও জরুরি সময়ে আপনার গ্রুপ ও এলাকা মিললে আপনাকে জানানো হবে। নিবন্ধনের সময় ঠিক করবেন আপনার ফোন নম্বর দেখানো হবে কি না।','Healthy people aged 18 to 60 can donate. Register once and you are notified when your group and area match an emergency. At sign-up you choose whether your phone number is shown.')}</p>
+  <p>${L('১৮ থেকে ৬০ বছর বয়সী সুস্থ যে কেউ নিয়ম মেনে রক্ত দিতে পারেন। একবার নিবন্ধন করুন — কারও জরুরি সময়ে আপনার গ্রুপ ও এলাকা মিললে আপনাকে জানানো হবে। আপনার ফোন নম্বর সবাইকে দেখানো হবে, যাতে রক্তগ্রহীতা সরাসরি ফোন করতে পারেন।','Healthy people aged 18 to 60 can donate. Register once and you are notified when your group and area match an emergency. Your phone number is shown to everyone so people who need blood can call you directly.')}</p>
   <div><a class="btn btn-p" href="#/register">${L('রক্তদাতা হিসেবে নিবন্ধন করুন','Register as a donor')}</a></div></div></section>`;
 }
 
 let fs={group:'',union:'',area:'',avail:'',last:''};
 function viewFind(){
-  return`<div class="ph"><h1>${L('রক্তদাতা খুঁজুন','Find a blood donor')}</h1><p class="muted">${L('গ্রুপ ও এলাকা বেছে নিন। যাঁরা অনুমতি দিয়েছেন তাঁদের নম্বর দেখানো হয়, “কল করুন” চাপলেই ফোন হবে। বাকিদের “যোগাযোগ করুন” চাপলে অনুরোধ যাবে।','Choose a group and area. Donors who allowed it show their number: tap “Call”. For the others, “Contact” sends a request.')}</p></div>
+  return`<div class="ph"><h1>${L('রক্তদাতা খুঁজুন','Find a blood donor')}</h1><p class="muted">${L('গ্রুপ ও এলাকা বেছে নিন। দাতার নম্বরে “কল করুন” চাপলেই সরাসরি ফোন হবে। নম্বর লুকিয়ে রাখা দাতাকে “যোগাযোগ করুন” চেপে অনুরোধ পাঠান।','Choose a group and area. Donors who allowed it show their number: tap “Call”. For the others, “Contact” sends a request.')}</p></div>
   <div class="card"><fieldset><legend>${L('রক্তের গ্রুপ','Blood group')}</legend><div class="chips" id="gchips">${GROUPS.map(g=>`<button type="button" class="chip" data-act="gchip" data-g="${g}" aria-pressed="${fs.group===g}">${g}</button>`).join('')}</div></fieldset>
   <div class="two"><div class="field"><label for="f-union">${L('ইউনিয়ন / পৌরসভা','Union / Paurashava')}</label><select id="f-union" data-f="union">${unionOpts(fs.union,L('সব এলাকা','All areas'))}</select></div>
   <div class="field"><label for="f-area">${L('গ্রাম / এলাকা','Village / area')}</label><input type="text" id="f-area" data-f="area" value="${esc(fs.area)}" placeholder="${L('যেমন: ঢালুয়া বাজার','e.g. Dhalua Bazar')}"></div>
@@ -472,12 +510,9 @@ function viewRegister(){
   ${fld('emergencyContact',L('জরুরি যোগাযোগ নম্বর (ঐচ্ছিক)','Emergency contact (optional)'),'<input type="tel" id="emergencyContact" name="emergencyContact" inputmode="numeric" placeholder="01XXXXXXXXX">',L('পরিবারের কারও নম্বর। কখনো প্রকাশ্যে দেখানো হবে না।','A family member’s number. Never shown publicly.'))}
   ${fld('password',L('পাসওয়ার্ড (ড্যাশবোর্ডে লগইনের জন্য)','Password (for dashboard login)'),'<input type="password" id="password" name="password" autocomplete="new-password" minlength="6">',L('কমপক্ষে ৬ অক্ষর।','At least 6 characters.'))}</div>
   <div class="chk-group"><label class="chk"><input type="checkbox" name="available" checked><span>${L('আমি এখন রক্ত দিতে প্রস্তুত','I am currently available to donate')}</span></label>
-  <label class="chk"><input type="checkbox" name="emergencyReady"><span>${L('জরুরি ডাকে সাড়া দিতে চাই','I want to respond to emergency calls')}</span></label>
-  <div class="field"><p class="lbl">${L('আমার ফোন নম্বর ওয়েবসাইটে দেখানো হবে কি?','Show my phone number on the website?')}</p>
-  <label class="chk"><input type="radio" name="showPhone" value="yes"><span>${L('হ্যাঁ, দেখানো হোক — যে কেউ সরাসরি কল করে রক্ত চাইতে পারবেন','Yes, show it — anyone can call me directly to ask for blood')}</span></label>
-  <label class="chk"><input type="radio" name="showPhone" value="no"><span>${L('না, গোপন থাকুক — শুধু অনুরোধ পাঠিয়ে যোগাযোগ করা যাবে','No, keep it private — people can only send me a request')}</span></label>
-  <p class="hint">${L('যেকোনো সময় ড্যাশবোর্ড থেকে বদলাতে পারবেন।','You can change this any time from your dashboard.')}</p><p class="err" id="e-showPhone" role="alert"></p></div>
-  <div class="field"><label class="chk" for="consent"><input type="checkbox" id="consent" name="consent"><span>${L('আমি রক্তদাতা হিসেবে নিবন্ধিত হতে এবং আমার নাম, রক্তের গ্রুপ ও এলাকা এই ওয়েবসাইটে দেখানোর অনুমতি দিচ্ছি। আমি সুস্থ এবং যেকোনো সময় আমার তথ্য মুছে ফেলতে পারি।','I agree to be registered and for my name, blood group and area to be shown on this site. I am in good health and can delete my data at any time.')}</span></label><p class="err" id="e-consent" role="alert"></p></div></div>
+  <label class="chk"><input type="checkbox" name="emergencyReady" checked><span>${L('জরুরি ডাকে সাড়া দিতে চাই এবং ফোনে অ্যালার্ট পেতে চাই (Chrome অনুমতি চাইলে “Allow” দিন)','I want to respond to emergency calls and get phone alerts (tap “Allow” when Chrome asks)')}</span></label>
+  <p class="hint" style="background:var(--brand-soft);color:var(--ink);padding:10px 12px;border-radius:10px">${L('আপনার মোবাইল নম্বর ওয়েবসাইটে সবার জন্য দেখানো হবে, যাতে রক্তের প্রয়োজনে রক্তগ্রহীতা সরাসরি ফোন করতে পারেন। এতে আপত্তি থাকলে নিবন্ধন করবেন না। পরে ড্যাশবোর্ড থেকে নম্বর লুকাতে পারবেন।','Your mobile number will be shown to everyone on this site so that people who need blood can call you directly. If you do not agree, please do not register. You can hide it later from your dashboard.')}</p>
+  <div class="field"><label class="chk" for="consent"><input type="checkbox" id="consent" name="consent"><span>${L('আমি রক্তদাতা হিসেবে নিবন্ধিত হতে এবং আমার নাম, মোবাইল নম্বর, রক্তের গ্রুপ ও এলাকা এই ওয়েবসাইটে সবার জন্য দেখানোর অনুমতি দিচ্ছি। আমি সুস্থ এবং যেকোনো সময় আমার তথ্য মুছে ফেলতে পারি।','I agree to be registered and for my name, mobile number, blood group and area to be shown to everyone on this site. I am in good health and can delete my data at any time.')}</span></label><p class="err" id="e-consent" role="alert"></p></div></div>
   <button class="btn btn-p" type="submit" style="width:100%">${L('নিবন্ধন জমা দিন','Submit registration')}</button></form>`;
 }
 function viewRequestNew(){
@@ -534,7 +569,7 @@ function viewDashboard(){
   const e=eligible(d);const notes=db.notes.filter(n=>n.donorId===d.id).sort((a,b)=>b.at-a.at);
   const cr=db.contacts.filter(c=>c.donorId===d.id).sort((a,b)=>b.at-a.at);
   const banner=d.status==='pending'?`<div class="card" style="background:var(--amber-soft);color:var(--amber);border-color:transparent">${L('আপনার প্রোফাইল এখনো প্রকাশিত হয়নি।','Your profile is not published yet.')}</div>`:d.status!=='approved'?`<div class="card" style="background:var(--blood-soft);color:var(--blood);border-color:transparent">${L('অ্যাডমিন আপনার প্রোফাইল প্রকাশ বন্ধ রেখেছেন ('+statusLabel(d.status)+')। বিস্তারিত জানতে অ্যাডমিনের সঙ্গে যোগাযোগ করুন।','An admin has unpublished your profile ('+statusLabel(d.status)+'). Please contact the admin.')}</div>`:'';
-  return`<div class="stack"><div style="display:flex;gap:14px;align-items:center">${avatar(d)}<div style="flex:1"><h1 style="margin:0;font-size:1.4rem;font-family:'Hind Siliguri',sans-serif">${esc(d.name)}</h1><div class="meta">${gb(d.group,'sm')}<span class="pill ${d.status==='approved'?'ok':'warn'}">${statusLabel(d.status)}</span></div></div><button class="btn btn-g btn-s" data-act="logout" type="button">${L('লগআউট','Log out')}</button></div>${banner}
+  return`<div class="stack"><div style="display:flex;gap:14px;align-items:center">${avatar(d)}<div style="flex:1"><h1 style="margin:0;font-size:1.4rem;font-family:'Hind Siliguri',sans-serif">${esc(d.name)}</h1><div class="meta">${gb(d.group,'sm')}<span class="pill ${d.status==='approved'?'ok':'warn'}">${statusLabel(d.status)}</span></div></div><button class="btn btn-g btn-s" data-act="logout" type="button">${L('লগআউট','Log out')}</button></div>${banner}<section class="card" id="pushcard"></section>
   <section class="card"><h3>${L('আমার অবস্থা','My status')}</h3>
   <label class="sw"><input type="checkbox" data-tog="available"${d.available?' checked':''}><span class="k"></span><span>${L('এখন রক্ত দিতে প্রস্তুত','Available to donate')}</span></label>
   <label class="sw"><input type="checkbox" data-tog="emergencyReady"${d.emergencyReady?' checked':''}><span class="k"></span><span>${L('জরুরি ডাকে সাড়া দেব','Respond to emergency calls')}</span></label>
@@ -550,7 +585,7 @@ function viewDashboard(){
   ${fld('emergencyContact',L('জরুরি যোগাযোগ নম্বর','Emergency contact'),`<input type="tel" id="emergencyContact" name="emergencyContact" value="${esc(d.emergencyContact)}" inputmode="numeric">`)}
   ${fld('photoFile',L('নতুন ছবি','New photo'),'<input type="file" id="photoFile" name="photoFile" accept="image/jpeg,image/png,image/webp">')}</div>
   <p class="hint" style="margin-bottom:12px">${L('মোবাইল নম্বর বদলাতে চাইলে অ্যাডমিনের সঙ্গে যোগাযোগ করুন।','To change your mobile number, contact the admin.')}</p><button class="btn btn-p" type="submit">${L('সংরক্ষণ করুন','Save changes')}</button></form></section>
-  <section class="card"><h3>${L('জরুরি বিজ্ঞপ্তি','Emergency alerts')}</h3>${notes.length?notes.slice(0,6).map(n=>{const r=db.requests.find(x=>x.id===n.requestId);return r?`<p style="margin:0 0 10px"><span class="bg sm">${esc(r.group)}</span> <a href="#/requests">${esc(r.hospital)} · ${fmtDT(r.when)}</a></p>`:''}).join(''):`<p class="muted">${L('এখনও কোনো বিজ্ঞপ্তি নেই। আপনার গ্রুপ ও এলাকায় জরুরি আবেদন এলে এখানে দেখাবে।','No alerts yet. Matching emergency requests will appear here.')}</p>`}</section>
+  <section class="card"><h3>${L('জরুরি অ্যালার্ট','Emergency alerts')}</h3>${notes.length?notes.slice(0,6).map(n=>{const r=db.requests.find(x=>x.id===n.requestId);return r?`<p style="margin:0 0 10px"><span class="bg sm">${esc(r.group)}</span> <a href="#/requests">${esc(r.hospital)} · ${fmtDT(r.when)}</a></p>`:''}).join(''):`<p class="muted">${L('এখনও কোনো অ্যালার্ট নেই। আপনার গ্রুপ ও এলাকায় জরুরি আবেদন এলে এখানে দেখাবে।','No alerts yet. Matching emergency requests will appear here.')}</p>`}</section>
   <section class="card"><h3>${L('যোগাযোগের অনুরোধ','Contact requests')}</h3>${cr.length?cr.slice(0,10).map(c=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${esc(c.name)}</b> · <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a><div class="small muted">${fmtDT(c.at)}</div>${c.message?`<div>${esc(c.message)}</div>`:''}</div>`).join(''):`<p class="muted">${L('কেউ এখনও অনুরোধ পাঠায়নি।','No requests yet.')}</p>`}</section>
   <section class="card"><h3>${L('রক্তদানের ইতিহাস','Donation history')}</h3>${d.history.length?`<ul style="margin:0;padding-left:20px">${[...d.history].sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<li>${fmtDate(h.date)}${h.place?' — '+esc(h.place):''}</li>`).join('')}</ul>`:`<p class="muted">${L('এখনও কিছু যোগ করা হয়নি।','Nothing logged yet.')}</p>`}</section>
   <section class="card"><h3>${L('আমার তথ্য','My data')}</h3><p class="muted small">${L('আপনি চাইলে যেকোনো সময় প্রোফাইল ও সব তথ্য মুছে ফেলতে পারেন।','You can delete your profile and all its data at any time.')}</p><button class="btn btn-d btn-s" data-act="delme" type="button">${L('আমার প্রোফাইল মুছুন','Delete my profile')}</button></section></div>`;
@@ -598,6 +633,7 @@ function render(keep){
   const V={home:viewHome,find:viewFind,register:viewRegister,'request-new':viewRequestNew,requests:viewRequests,unions:viewUnions,donor:()=>viewProfile(parts[1]),login:viewLogin,dashboard:viewDashboard,admin:viewAdmin};
   $('#app').innerHTML=(V[key]||viewHome)();
   if(key==='find')updateResults();
+  if(key==='dashboard')updatePushCard();
   chrome(key);if(!keep)window.scrollTo(0,0);
 }
 function chrome(key){
@@ -613,14 +649,14 @@ function chrome(key){
   document.documentElement.lang=lang;
   const ft=document.getElementById('foot');
   if(!ft){const f=document.createElement('footer');f.id='foot';document.body.insertBefore(f,$('#bnav'))}
-  $('#foot').innerHTML=`<div class="wrap"><p><b>Nangalkot Blood Connect</b> — ${L('রক্তের প্রয়োজনে, নাঙ্গলকোট একসাথে','When blood is needed, Nangalkot stands together')}</p><p>${L('রক্তদানের আগে সুস্থতা ও বিরতির নিয়ম নিশ্চিত করতে চিকিৎসকের পরামর্শ নিন। এই ওয়েবসাইট চিকিৎসা সেবা নয়।','Please confirm your health and donation gap with a doctor before donating. This site is not a medical service.')}</p><p><a href="#/admin">${L('অ্যাডমিন','Admin')}</a></p></div>`;
+  $('#foot').innerHTML=`<div class="wrap"><p><b>Onedrop Blood Bank Nangalkot</b> — ${L('রক্তের প্রয়োজনে, নাঙ্গলকোট একসাথে','When blood is needed, Nangalkot stands together')}</p><p>${L('এই ওয়েবসাইট রক্ত মজুত করে না। এটি স্বেচ্ছাসেবী রক্তদাতা ও রক্তগ্রহীতাকে যুক্ত করার একটি প্ল্যাটফর্ম।','This site does not store blood. It is a platform that connects volunteer donors with people who need blood.')}</p><p>${L('রক্তদানের আগে সুস্থতা ও বিরতির নিয়ম নিশ্চিত করতে চিকিৎসকের পরামর্শ নিন। এই ওয়েবসাইট চিকিৎসা সেবা নয়।','Please confirm your health and donation gap with a doctor before donating. This site is not a medical service.')}</p><p><a href="#/admin">${L('অ্যাডমিন','Admin')}</a></p></div>`;
 }
 
 /* ================= events ================= */
 const ACT={};
 const SITE_URL='https://mdrakibofficial257-web.github.io/Blood-Connect-/';
-ACT.sharesite=async()=>{const txt=L('Nangalkot Blood Connect — রক্তের প্রয়োজনে, নাঙ্গলকোট একসাথে','Nangalkot Blood Connect: when blood is needed, Nangalkot stands together');
-  try{if(navigator.share){await navigator.share({title:'Nangalkot Blood Connect',text:txt,url:SITE_URL});return}}catch(e){if(e&&e.name==='AbortError')return}
+ACT.sharesite=async()=>{const txt=L('Onedrop Blood Bank Nangalkot — রক্তের প্রয়োজনে, নাঙ্গলকোট একসাথে','Onedrop Blood Bank Nangalkot: when blood is needed, Nangalkot stands together');
+  try{if(navigator.share){await navigator.share({title:'Onedrop Blood Bank Nangalkot',text:txt,url:SITE_URL});return}}catch(e){if(e&&e.name==='AbortError')return}
   try{await navigator.clipboard.writeText(SITE_URL);toast(L('সাইটের লিংক কপি হয়েছে।','Site link copied.'));return}catch(e){}
   openModal(`<h3>${L('সাইটের লিংক','Site link')}</h3><p style="user-select:all;word-break:break-all">${esc(SITE_URL)}</p><button class="btn btn-g" data-act="close" type="button" style="width:100%">${L('বন্ধ করুন','Close')}</button>`)};
 ACT.lang=()=>{lang=lang==='bn'?'en':'bn';store.set('nbc.lang',lang);render(true)};
@@ -647,7 +683,9 @@ ACT.share=async el=>{const r=db.requests.find(x=>x.id===el.dataset.id);if(!r)ret
   try{await navigator.clipboard.writeText(txt);toast(L('আবেদনের লেখা কপি হয়েছে।','Request text copied.'))}catch(e){openModal(`<h3>${L('শেয়ার করুন','Share')}</h3><p style="user-select:all">${esc(txt)}</p><button class="btn btn-g" data-act="close" type="button" style="width:100%">${L('বন্ধ করুন','Close')}</button>`)}};
 const failMsg=e=>e&&e.message==='rate_limit'?L('অল্প সময়ে অনেকবার চেষ্টা হয়েছে। পরে আবার চেষ্টা করুন।','Too many attempts. Please try again later.'):L('সংযোগে সমস্যা হয়েছে। ইন্টারনেট দেখে আবার চেষ্টা করুন।','Connection problem. Please check your internet and try again.');
 async function signOutAll(){await SB.signOut();db.mine=null;db.adminOk=false;db.contacts=[];db.notes=[];db.reports=[];db.allDonors=[];db.allReqs=[];await refreshData();rebuild()}
-ACT.logout=async()=>{await signOutAll();location.hash='#/login';render()};
+ACT.logout=async()=>{try{await pushDisable()}catch(e){}await signOutAll();location.hash='#/login';render()};
+ACT.pushon=async()=>{try{const r=await pushEnable();if(r==='on'){store.set('nbc.push.'+me().id,'1');toast(L('অ্যালার্ট চালু হয়েছে।','Alerts are on.'))}else if(r==='denied')toast(L('অনুমতি দেওয়া হয়নি।','Permission was not granted.'));else toast(L('এই ব্রাউজারে সমর্থন নেই।','Not supported in this browser.'))}catch(e){toast(L('অ্যালার্ট চালু করা যায়নি। আবার চেষ্টা করুন।','Could not turn alerts on. Please try again.'))}updatePushCard()};
+ACT.pushoff=async()=>{try{await pushDisable();store.set('nbc.push.'+me().id,'0');toast(L('অ্যালার্ট বন্ধ করা হয়েছে।','Alerts turned off.'))}catch(e){toast(failMsg(e))}updatePushCard()};
 ACT.alogout=async()=>{await signOutAll();render()};
 ACT.atab=el=>{atab=el.dataset.t;render(true)};
 ACT.delme=()=>confirmBox(L('আপনার প্রোফাইল ও সব তথ্য স্থায়ীভাবে মুছে যাবে।','Your profile and all its data will be deleted permanently.'),async()=>{const d=me();if(!d)return;try{await SB.rest('donors?id=eq.'+encodeURIComponent(d.id),{method:'DELETE'});SB.saveSess(null);db.mine=null;db.contacts=[];db.notes=[];await refreshData();rebuild();toast(L('প্রোফাইল মুছে ফেলা হয়েছে।','Profile deleted.'));location.hash='#/';render()}catch(e){toast(failMsg(e))}});
@@ -665,7 +703,7 @@ ACT.adm=async el=>{
       ${fld('village',L('গ্রাম / এলাকা','Village / area'),`<input type="text" id="village" name="village" value="${esc(d.village)}">`)}${fld('donationCount',L('মোট রক্তদান','Donations'),`<input type="number" id="donationCount" name="donationCount" min="0" max="200" value="${d.donationCount}">`)}
       ${fld('lastDonation',L('সর্বশেষ রক্তদান','Last donation'),`<input type="date" id="lastDonation" name="lastDonation" value="${esc(d.lastDonation)}">`)}</div>
       <div class="row"><button class="btn btn-g" data-act="close" type="button">${L('বাতিল','Cancel')}</button><button class="btn btn-p" type="submit">${L('সংরক্ষণ','Save')}</button></div></form>`);
-    case'rq-approve':{await patch('blood_requests',{status:'approved'});let n=0;try{n=(await SB.rest('notifications?select=id&request_id=eq.'+enc)).length}catch(e){}return done(L(N(n)+' জন দাতাকে বিজ্ঞপ্তি পাঠানো হয়েছে।',n+' donor(s) notified.'))}
+    case'rq-approve':{await patch('blood_requests',{status:'approved'});let n=0;try{n=(await SB.rest('notifications?select=id&request_id=eq.'+enc)).length}catch(e){}return done(L(N(n)+' জন দাতাকে অ্যালার্ট পাঠানো হয়েছে।',n+' donor(s) alerted.'))}
     case'rq-reject':await patch('blood_requests',{status:'rejected'});return done();
     case'rq-done':await patch('blood_requests',{status:'fulfilled'});return done(L('পূর্ণ হিসেবে চিহ্নিত।','Marked fulfilled.'));
     case'rq-del':return confirmBox(L('আবেদনটি মুছে যাবে।','Delete this request?'),async()=>{try{await del('blood_requests');await done()}catch(e){toast(failMsg(e))}});
@@ -711,9 +749,9 @@ const FORMS={
     if(d.emergencyContact&&!phoneOk(emc))E.emergencyContact=L('সঠিক নম্বর দিন।','Enter a valid number.');
     else if(d.emergencyContact&&emc===phone)E.emergencyContact=L('নিজের নম্বর দেওয়া যাবে না।','This cannot be your own number.');
     if((d.password||'').length<6)E.password=L('কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন।','Use a password of at least 6 characters.');
-    if(!['yes','no'].includes(d.showPhone))E.showPhone=L('নম্বর দেখানো হবে কি না বেছে নিন।','Choose whether to show your number.');
     if(!d.consent)E.consent=L('নিবন্ধনের জন্য সম্মতি প্রয়োজন।','Consent is required to register.');
     if(!showErrors(f,E))return;
+    const askPerm=(d.emergencyReady&&pushSupported()&&Notification.permission==='default')?Notification.requestPermission():null;
     if(!rate('reg',3600e3,3))return toast(L('অল্প সময়ে অনেকবার চেষ্টা হয়েছে। পরে আবার চেষ্টা করুন।','Too many attempts. Try again later.'));
     const photo=await resizePhoto(f.elements.photoFile.files[0]);
     if(photo===null)return showErrors(f,{photoFile:L('ছবি JPG, PNG বা WebP হতে হবে (৮ MB এর কম)।','Photo must be JPG, PNG or WebP under 8 MB.')});
@@ -725,13 +763,14 @@ const FORMS={
       if(!ok){try{await SB.signIn(email,d.password)}catch(e){if(e.status&&e.status<500)return showErrors(f,{phone:dup});throw e}}
       const own=await SB.rest('donors?select=id&user_id=eq.'+SB.sess.uid);
       if(!own.length){
-        await SB.rest('donors',{method:'POST',body:{user_id:SB.sess.uid,name,phone,gender:d.gender,blood_group:d.group,dob:d.dob,union_id:d.unionId,village:d.village.trim(),photo:photo||null,last_donation:d.lastDonation||null,donation_count:cnt,available:!!d.available,emergency_ready:!!d.emergencyReady,show_phone:d.showPhone==='yes',emergency_contact:emc||null}});
+        await SB.rest('donors',{method:'POST',body:{user_id:SB.sess.uid,name,phone,gender:d.gender,blood_group:d.group,dob:d.dob,union_id:d.unionId,village:d.village.trim(),photo:photo||null,last_donation:d.lastDonation||null,donation_count:cnt,available:!!d.available,emergency_ready:!!d.emergencyReady,show_phone:true,emergency_contact:emc||null}});
       }
       await loadPrivate();rebuild();
     }catch(e){
       if(e&&e.code==='23505')return showErrors(f,{phone:dup});
       throw e;
     }
+    if(askPerm){try{if((await askPerm)==='granted'&&me()){await pushEnable();store.set('nbc.push.'+me().id,'1')}}catch(e){}}
     toast(L('নিবন্ধন সম্পন্ন! আপনি এখন খোঁজ তালিকায় আছেন।','Registration complete! You are now in the search list.'));location.hash='#/dashboard';
   },
   async request(f,d){
@@ -756,7 +795,7 @@ const FORMS={
     if(!showErrors(f,E))return;if(!rate('contact',3600e3,5))return toast(L('অল্প সময়ে অনেকগুলো অনুরোধ পাঠানো হয়েছে।','Too many requests sent. Try again later.'));
     if(!db.donors.some(x=>x.id===d.donorId))return closeModal();
     await SB.rest('contact_requests',{method:'POST',auth:false,body:{donor_id:d.donorId,requester_name:d.cname.trim(),requester_phone:p,message:(d.cmsg||'').trim().slice(0,200)||null}});
-    closeModal(true);toast(L('অনুরোধ পাঠানো হয়েছে। দাতা দেখে আপনাকে ফোন করবেন।','Request sent. The donor will call you back.'));
+    closeModal(true);toast(L('অনুরোধ পাঠানো হয়েছে। দাতা দেখলে আপনাকে ফোন করবেন। জরুরি হলে আরও কয়েকজন দাতাকে অনুরোধ পাঠান বা সরাসরি কল করুন।','Request sent. The donor will call you if they see it. If it is urgent, contact a few more donors or call directly.'));
   },
   async report(f,d){
     const E={};if(!d.reason)E.reason=L('একটি কারণ বেছে নিন।','Select a reason.');if(!showErrors(f,E))return;
